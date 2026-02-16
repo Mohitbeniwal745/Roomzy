@@ -90,7 +90,7 @@ const HostDashboard = () => {
         status: "cancelled",
         cancellation_reason: cancelReason.trim(),
         cancelled_by: user!.id,
-      })
+      } as any)
       .eq("id", cancelDialog.bookingId);
 
     if (error) {
