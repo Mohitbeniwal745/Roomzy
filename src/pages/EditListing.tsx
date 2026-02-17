@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Upload, X } from "lucide-react";
+import { Upload, X, Plus, Trash2 } from "lucide-react";
 
 const AMENITIES = ["WiFi", "Kitchen", "Parking", "Pool", "Air Conditioning", "Heating", "Washer", "Dryer", "TV", "Gym", "Hot Tub", "Pets Allowed"];
 
@@ -26,15 +26,18 @@ const EditListing = () => {
   const [amenities, setAmenities] = useState<string[]>([]);
   const [existingImages, setExistingImages] = useState<{ id: string; image_url: string }[]>([]);
   const [newImages, setNewImages] = useState<File[]>([]);
+  const [roomNumbers, setRoomNumbers] = useState<string[]>([""]);
+  const [existingRooms, setExistingRooms] = useState<{ id: string; room_number: string }[]>([]);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!id) return;
     const fetch = async () => {
-      const [listingRes, imagesRes] = await Promise.all([
+      const [listingRes, imagesRes, roomsRes] = await Promise.all([
         supabase.from("listings").select("*").eq("id", id).single(),
         supabase.from("listing_images").select("id, image_url").eq("listing_id", id).order("position"),
+        supabase.from("rooms").select("id, room_number").eq("listing_id", id).order("room_number"),
       ]);
       if (listingRes.data) {
         const l = listingRes.data;
@@ -45,6 +48,9 @@ const EditListing = () => {
         setAmenities(l.amenities ?? []);
       }
       setExistingImages(imagesRes.data ?? []);
+      const rooms = roomsRes.data ?? [];
+      setExistingRooms(rooms);
+      setRoomNumbers(rooms.length > 0 ? rooms.map((r) => r.room_number) : [""]);
       setLoading(false);
     };
     fetch();
@@ -72,6 +78,22 @@ const EditListing = () => {
       toast({ title: "Error", description: error.message, variant: "destructive" });
       setSaving(false);
       return;
+    }
+
+    // Sync rooms: delete removed, insert new
+    const newRoomNumbers = roomNumbers.filter((r) => r.trim() !== "");
+    const existingRoomNumbers = existingRooms.map((r) => r.room_number);
+    
+    // Delete rooms that were removed
+    const toDelete = existingRooms.filter((r) => !newRoomNumbers.includes(r.room_number));
+    for (const r of toDelete) {
+      await supabase.from("rooms").delete().eq("id", r.id);
+    }
+    
+    // Insert rooms that are new
+    const toInsert = newRoomNumbers.filter((rn) => !existingRoomNumbers.includes(rn));
+    if (toInsert.length > 0) {
+      await supabase.from("rooms").insert(toInsert.map((rn) => ({ listing_id: id, room_number: rn })));
     }
 
     for (let i = 0; i < newImages.length; i++) {
@@ -129,6 +151,33 @@ const EditListing = () => {
                       {a}
                     </label>
                   ))}
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Room Numbers</Label>
+                <p className="text-xs text-muted-foreground">Add each room number your property has (e.g. 101, 102, 201)</p>
+                <div className="space-y-2">
+                  {roomNumbers.map((rn, i) => (
+                    <div key={i} className="flex items-center gap-2">
+                      <Input
+                        value={rn}
+                        onChange={(e) => {
+                          const updated = [...roomNumbers];
+                          updated[i] = e.target.value;
+                          setRoomNumbers(updated);
+                        }}
+                        placeholder={`Room ${i + 1}`}
+                      />
+                      {roomNumbers.length > 1 && (
+                        <Button type="button" variant="ghost" size="icon" onClick={() => setRoomNumbers((prev) => prev.filter((_, j) => j !== i))}>
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      )}
+                    </div>
+                  ))}
+                  <Button type="button" variant="outline" size="sm" onClick={() => setRoomNumbers((prev) => [...prev, ""])}>
+                    <Plus className="h-4 w-4 mr-1" /> Add Room
+                  </Button>
                 </div>
               </div>
               <div className="space-y-2">
