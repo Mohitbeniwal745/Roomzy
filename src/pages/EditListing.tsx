@@ -7,13 +7,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Upload, X } from "lucide-react";
 import RoomNumbersInput from "@/components/RoomNumbersInput";
+import AmenitiesInput from "@/components/AmenitiesInput";
 
-const AMENITIES = ["WiFi", "Kitchen", "Parking", "Pool", "Air Conditioning", "Heating", "Washer", "Dryer", "TV", "Gym", "Hot Tub", "Pets Allowed"];
+
 
 const EditListing = () => {
   const { id } = useParams<{ id: string }>();
@@ -57,9 +57,6 @@ const EditListing = () => {
     fetch();
   }, [id]);
 
-  const toggleAmenity = (a: string) => {
-    setAmenities((prev) => prev.includes(a) ? prev.filter((x) => x !== a) : [...prev, a]);
-  };
 
   const handleDeleteImage = async (imgId: string) => {
     await supabase.from("listing_images").delete().eq("id", imgId);
@@ -143,17 +140,7 @@ const EditListing = () => {
                 <Label htmlFor="desc">Description</Label>
                 <Textarea id="desc" value={description} onChange={(e) => setDescription(e.target.value)} rows={4} />
               </div>
-              <div className="space-y-2">
-                <Label>Amenities</Label>
-                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                  {AMENITIES.map((a) => (
-                    <label key={a} className="flex items-center gap-2 text-sm cursor-pointer">
-                      <Checkbox checked={amenities.includes(a)} onCheckedChange={() => toggleAmenity(a)} />
-                      {a}
-                    </label>
-                  ))}
-                </div>
-              </div>
+              <AmenitiesInput amenities={amenities} setAmenities={setAmenities} />
               <RoomNumbersInput roomNumbers={roomNumbers} setRoomNumbers={setRoomNumbers} />
               <div className="space-y-2">
                 <Label>Images</Label>
