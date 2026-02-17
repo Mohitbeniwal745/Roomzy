@@ -40,14 +40,9 @@ const ListingCard = ({ id, title, location, price_per_night, image_url }: Listin
         <p className="mt-1 flex items-center gap-1 text-sm text-muted-foreground">
           <MapPin className="h-3.5 w-3.5" /> {location}
         </p>
-        <div className="mt-2 flex items-center justify-between">
-          <p className="text-lg font-bold text-primary">
-            ${price_per_night} <span className="text-sm font-normal text-muted-foreground">/ night</span>
-          </p>
-          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground text-sm font-bold shadow transition-transform hover:scale-110">
-            →
-          </span>
-        </div>
+        <p className="mt-2 text-lg font-bold text-primary">
+          ${price_per_night} <span className="text-sm font-normal text-muted-foreground">/ night</span>
+        </p>
       </div>
     </Link>
   </motion.div>
