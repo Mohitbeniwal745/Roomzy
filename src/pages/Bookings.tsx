@@ -55,9 +55,14 @@ const Bookings = () => {
                       {format(new Date(b.check_in), "MMM d, yyyy")} – {format(new Date(b.check_out), "MMM d, yyyy")}
                     </p>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <Badge className={statusColor[b.status] ?? ""}>{b.status}</Badge>
-                    <span className="font-bold text-primary">${b.total_price}</span>
+                  <div className="flex flex-col items-end gap-1">
+                    <div className="flex items-center gap-3">
+                      <Badge className={statusColor[b.status] ?? ""}>{b.status}</Badge>
+                      <span className="font-bold text-primary">${b.total_price}</span>
+                    </div>
+                    {b.status === "cancelled" && b.cancellation_reason && (
+                      <p className="text-xs text-destructive">Reason: {b.cancellation_reason}</p>
+                    )}
                   </div>
                 </CardContent>
               </Card>
