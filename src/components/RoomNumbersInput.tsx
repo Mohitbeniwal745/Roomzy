@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Plus, Trash2, XCircle } from "lucide-react";
 
 type Mode = "manual" | "auto";
+type DeleteMode = "range" | "specific";
 
 interface RoomNumbersInputProps {
   roomNumbers: string[];
@@ -17,18 +18,53 @@ const RoomNumbersInput = ({ roomNumbers, setRoomNumbers }: RoomNumbersInputProps
   const [rangeFrom, setRangeFrom] = useState("");
   const [rangeTo, setRangeTo] = useState("");
 
+  // Delete state
+  const [showDelete, setShowDelete] = useState(false);
+  const [deleteMode, setDeleteMode] = useState<DeleteMode>("specific");
+  const [deleteRangeFrom, setDeleteRangeFrom] = useState("");
+  const [deleteRangeTo, setDeleteRangeTo] = useState("");
+  const [deleteSpecific, setDeleteSpecific] = useState("");
+
   const generateFromRange = () => {
     const from = parseInt(rangeFrom);
     const to = parseInt(rangeTo);
     if (isNaN(from) || isNaN(to) || from > to) return;
-    if (to - from + 1 > 500) return; // safety cap
+    if (to - from + 1 > 500) return;
     const generated = Array.from({ length: to - from + 1 }, (_, i) => String(from + i));
-    // Append to existing, deduplicating
     setRoomNumbers((prev) => {
       const existing = prev.filter((r) => r.trim() !== "");
       const merged = [...existing, ...generated.filter((g) => !existing.includes(g))];
       return merged.length > 0 ? merged : [""];
     });
+  };
+
+  const deleteByRange = () => {
+    const from = parseInt(deleteRangeFrom);
+    const to = parseInt(deleteRangeTo);
+    if (isNaN(from) || isNaN(to) || from > to) return;
+    const toRemove = new Set(
+      Array.from({ length: to - from + 1 }, (_, i) => String(from + i))
+    );
+    setRoomNumbers((prev) => {
+      const filtered = prev.filter((r) => !toRemove.has(r.trim()));
+      return filtered.length > 0 ? filtered : [""];
+    });
+    setDeleteRangeFrom("");
+    setDeleteRangeTo("");
+  };
+
+  const deleteBySpecific = () => {
+    const nums = deleteSpecific
+      .split(",")
+      .map((s) => s.trim())
+      .filter((s) => s !== "");
+    if (nums.length === 0) return;
+    const toRemove = new Set(nums);
+    setRoomNumbers((prev) => {
+      const filtered = prev.filter((r) => !toRemove.has(r.trim()));
+      return filtered.length > 0 ? filtered : [""];
+    });
+    setDeleteSpecific("");
   };
 
   const clearAllRooms = () => {
@@ -40,28 +76,24 @@ const RoomNumbersInput = ({ roomNumbers, setRoomNumbers }: RoomNumbersInputProps
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <Label>Room Numbers {validRoomCount > 0 && <span className="text-muted-foreground font-normal">({validRoomCount} rooms)</span>}</Label>
+        <Label>
+          Room Numbers{" "}
+          {validRoomCount > 0 && (
+            <span className="text-muted-foreground font-normal">({validRoomCount} rooms)</span>
+          )}
+        </Label>
         {validRoomCount > 0 && (
           <Button type="button" variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={clearAllRooms}>
-            <XCircle className="h-4 w-4 mr-1" /> Delete All Rooms
+            <XCircle className="h-4 w-4 mr-1" /> Delete All
           </Button>
         )}
       </div>
+
       <div className="flex gap-2">
-        <Button
-          type="button"
-          variant={mode === "manual" ? "default" : "outline"}
-          size="sm"
-          onClick={() => setMode("manual")}
-        >
+        <Button type="button" variant={mode === "manual" ? "default" : "outline"} size="sm" onClick={() => setMode("manual")}>
           Manual
         </Button>
-        <Button
-          type="button"
-          variant={mode === "auto" ? "default" : "outline"}
-          size="sm"
-          onClick={() => setMode("auto")}
-        >
+        <Button type="button" variant={mode === "auto" ? "default" : "outline"} size="sm" onClick={() => setMode("auto")}>
           Auto (Range)
         </Button>
       </div>
@@ -95,33 +127,87 @@ const RoomNumbersInput = ({ roomNumbers, setRoomNumbers }: RoomNumbersInputProps
         </>
       ) : (
         <>
-          <p className="text-xs text-muted-foreground">Enter a range to add room numbers. New rooms will be appended to existing ones (duplicates are skipped).</p>
+          {/* Generate section */}
+          <p className="text-xs text-muted-foreground">Enter a range to add room numbers. New rooms are appended (duplicates skipped).</p>
           <div className="flex items-center gap-2">
-            <Input
-              type="number"
-              value={rangeFrom}
-              onChange={(e) => setRangeFrom(e.target.value)}
-              placeholder="From (e.g. 101)"
-              className="w-32"
-            />
+            <Input type="number" value={rangeFrom} onChange={(e) => setRangeFrom(e.target.value)} placeholder="From (e.g. 101)" className="w-32" />
             <span className="text-sm text-muted-foreground">to</span>
-            <Input
-              type="number"
-              value={rangeTo}
-              onChange={(e) => setRangeTo(e.target.value)}
-              placeholder="To (e.g. 110)"
-              className="w-32"
-            />
+            <Input type="number" value={rangeTo} onChange={(e) => setRangeTo(e.target.value)} placeholder="To (e.g. 110)" className="w-32" />
             <Button type="button" variant="secondary" size="sm" onClick={generateFromRange}>
               Generate
             </Button>
           </div>
+
+          {/* Delete section */}
+          {validRoomCount > 0 && (
+            <div className="space-y-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="text-destructive border-destructive/30 hover:bg-destructive/10 hover:text-destructive"
+                onClick={() => setShowDelete(!showDelete)}
+              >
+                <Trash2 className="h-4 w-4 mr-1" /> {showDelete ? "Hide Delete Options" : "Delete Rooms"}
+              </Button>
+
+              {showDelete && (
+                <div className="rounded-md border border-destructive/20 bg-destructive/5 p-3 space-y-3">
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      variant={deleteMode === "specific" ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setDeleteMode("specific")}
+                    >
+                      By Room Numbers
+                    </Button>
+                    <Button
+                      type="button"
+                      variant={deleteMode === "range" ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setDeleteMode("range")}
+                    >
+                      By Range
+                    </Button>
+                  </div>
+
+                  {deleteMode === "range" ? (
+                    <div className="flex items-center gap-2">
+                      <Input type="number" value={deleteRangeFrom} onChange={(e) => setDeleteRangeFrom(e.target.value)} placeholder="From" className="w-32" />
+                      <span className="text-sm text-muted-foreground">to</span>
+                      <Input type="number" value={deleteRangeTo} onChange={(e) => setDeleteRangeTo(e.target.value)} placeholder="To" className="w-32" />
+                      <Button type="button" variant="destructive" size="sm" onClick={deleteByRange}>
+                        Delete
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <Input
+                        value={deleteSpecific}
+                        onChange={(e) => setDeleteSpecific(e.target.value)}
+                        placeholder="e.g. 1,3,4,5"
+                        className="flex-1"
+                      />
+                      <Button type="button" variant="destructive" size="sm" onClick={deleteBySpecific}>
+                        Delete
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Room badges */}
           {roomNumbers.length > 0 && roomNumbers[0] !== "" && (
             <div className="mt-2">
               <p className="text-xs text-muted-foreground mb-1">{validRoomCount} rooms total:</p>
               <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto">
-                {roomNumbers.filter(r => r.trim()).map((rn) => (
-                  <Badge key={rn} variant="secondary" className="text-xs">{rn}</Badge>
+                {roomNumbers.filter((r) => r.trim()).map((rn) => (
+                  <Badge key={rn} variant="secondary" className="text-xs">
+                    {rn}
+                  </Badge>
                 ))}
               </div>
             </div>
