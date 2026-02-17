@@ -27,11 +27,11 @@ const Index = () => {
   useEffect(() => {
     const cycle = () => {
       setShowRoomzy(true);
-      const timer = setTimeout(() => setShowRoomzy(false), 1000);
+      const timer = setTimeout(() => setShowRoomzy(false), 2000);
       return timer;
     };
     const t = cycle();
-    const interval = setInterval(cycle, 10000);
+    const interval = setInterval(cycle, 6000);
     return () => { clearTimeout(t); clearInterval(interval); };
   }, []);
 
@@ -87,10 +87,10 @@ const Index = () => {
               {showRoomzy ? (
                 <motion.span
                   key="roomzy"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
-                  transition={{ duration: 0.4 }}
+                  initial={{ opacity: 0, x: -60 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: 60 }}
+                  transition={{ duration: 0.5, ease: "easeInOut" }}
                   className="block text-primary"
                 >
                   Roomzy
@@ -98,10 +98,10 @@ const Index = () => {
               ) : (
                 <motion.span
                   key="tagline"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
-                  transition={{ duration: 0.4 }}
+                  initial={{ opacity: 0, x: -60 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: 60 }}
+                  transition={{ duration: 0.5, ease: "easeInOut" }}
                   className="block"
                 >
                   Find Your Perfect <span className="text-primary">Stay</span>
