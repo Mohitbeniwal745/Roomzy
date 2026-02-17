@@ -3,7 +3,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, XCircle } from "lucide-react";
 
 type Mode = "manual" | "auto";
 
@@ -23,12 +23,30 @@ const RoomNumbersInput = ({ roomNumbers, setRoomNumbers }: RoomNumbersInputProps
     if (isNaN(from) || isNaN(to) || from > to) return;
     if (to - from + 1 > 500) return; // safety cap
     const generated = Array.from({ length: to - from + 1 }, (_, i) => String(from + i));
-    setRoomNumbers(generated);
+    // Append to existing, deduplicating
+    setRoomNumbers((prev) => {
+      const existing = prev.filter((r) => r.trim() !== "");
+      const merged = [...existing, ...generated.filter((g) => !existing.includes(g))];
+      return merged.length > 0 ? merged : [""];
+    });
   };
+
+  const clearAllRooms = () => {
+    setRoomNumbers([""]);
+  };
+
+  const validRoomCount = roomNumbers.filter((r) => r.trim() !== "").length;
 
   return (
     <div className="space-y-3">
-      <Label>Room Numbers</Label>
+      <div className="flex items-center justify-between">
+        <Label>Room Numbers {validRoomCount > 0 && <span className="text-muted-foreground font-normal">({validRoomCount} rooms)</span>}</Label>
+        {validRoomCount > 0 && (
+          <Button type="button" variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={clearAllRooms}>
+            <XCircle className="h-4 w-4 mr-1" /> Delete All Rooms
+          </Button>
+        )}
+      </div>
       <div className="flex gap-2">
         <Button
           type="button"
@@ -77,7 +95,7 @@ const RoomNumbersInput = ({ roomNumbers, setRoomNumbers }: RoomNumbersInputProps
         </>
       ) : (
         <>
-          <p className="text-xs text-muted-foreground">Enter a range to auto-generate room numbers (e.g. 101 to 110)</p>
+          <p className="text-xs text-muted-foreground">Enter a range to add room numbers. New rooms will be appended to existing ones (duplicates are skipped).</p>
           <div className="flex items-center gap-2">
             <Input
               type="number"
@@ -100,7 +118,7 @@ const RoomNumbersInput = ({ roomNumbers, setRoomNumbers }: RoomNumbersInputProps
           </div>
           {roomNumbers.length > 0 && roomNumbers[0] !== "" && (
             <div className="mt-2">
-              <p className="text-xs text-muted-foreground mb-1">{roomNumbers.filter(r => r.trim()).length} rooms generated:</p>
+              <p className="text-xs text-muted-foreground mb-1">{validRoomCount} rooms total:</p>
               <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto">
                 {roomNumbers.filter(r => r.trim()).map((rn) => (
                   <Badge key={rn} variant="secondary" className="text-xs">{rn}</Badge>
