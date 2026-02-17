@@ -31,7 +31,7 @@ const Index = () => {
       return timer;
     };
     const t = cycle();
-    const interval = setInterval(cycle, 10000);
+    const interval = setInterval(cycle, 8000);
     return () => { clearTimeout(t); clearInterval(interval); };
   }, []);
 
