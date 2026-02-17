@@ -22,7 +22,6 @@ Deno.serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-    // Verify the user with their token
     const userClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_PUBLISHABLE_KEY")!, {
       global: { headers: { Authorization: authHeader } },
     });
@@ -34,8 +33,51 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Use service role to delete the user
     const adminClient = createClient(supabaseUrl, serviceRoleKey);
+
+    // Get all listings owned by this user
+    const { data: listings } = await adminClient
+      .from("listings")
+      .select("id")
+      .eq("host_id", user.id);
+
+    const listingIds = (listings ?? []).map((l: { id: string }) => l.id);
+
+    if (listingIds.length > 0) {
+      // Delete listing images
+      await adminClient.from("listing_images").delete().in("listing_id", listingIds);
+      // Delete rooms
+      await adminClient.from("rooms").delete().in("listing_id", listingIds);
+      // Cancel bookings on host's listings
+      await adminClient
+        .from("bookings")
+        .update({ status: "cancelled", cancelled_by: user.id, cancellation_reason: "Host account deleted" })
+        .in("listing_id", listingIds)
+        .neq("status", "cancelled");
+      // Delete listings
+      await adminClient.from("listings").delete().eq("host_id", user.id);
+    }
+
+    // Cancel guest bookings made by this user
+    await adminClient
+      .from("bookings")
+      .update({ status: "cancelled", cancelled_by: user.id, cancellation_reason: "Guest account deleted" })
+      .eq("guest_id", user.id)
+      .eq("status", "confirmed");
+
+    // Delete profile and role
+    await adminClient.from("user_roles").delete().eq("user_id", user.id);
+    await adminClient.from("profiles").delete().eq("id", user.id);
+
+    // Delete avatar storage files
+    const { data: avatarFiles } = await adminClient.storage.from("avatars").list(user.id);
+    if (avatarFiles?.length) {
+      await adminClient.storage.from("avatars").remove(
+        avatarFiles.map((f: { name: string }) => `${user.id}/${f.name}`)
+      );
+    }
+
+    // Finally delete the auth user
     const { error } = await adminClient.auth.admin.deleteUser(user.id);
     if (error) {
       return new Response(JSON.stringify({ error: error.message }), {
