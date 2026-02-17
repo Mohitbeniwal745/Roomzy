@@ -24,6 +24,7 @@ export type Database = {
           guest_id: string
           id: string
           listing_id: string
+          room_id: string | null
           status: string
           total_price: number
         }
@@ -36,6 +37,7 @@ export type Database = {
           guest_id: string
           id?: string
           listing_id: string
+          room_id?: string | null
           status?: string
           total_price: number
         }
@@ -48,6 +50,7 @@ export type Database = {
           guest_id?: string
           id?: string
           listing_id?: string
+          room_id?: string | null
           status?: string
           total_price?: number
         }
@@ -57,6 +60,13 @@ export type Database = {
             columns: ["listing_id"]
             isOneToOne: false
             referencedRelation: "listings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bookings_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
             referencedColumns: ["id"]
           },
         ]
@@ -158,6 +168,35 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      rooms: {
+        Row: {
+          created_at: string
+          id: string
+          listing_id: string
+          room_number: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          listing_id: string
+          room_number: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          listing_id?: string
+          room_number?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rooms_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "listings"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {

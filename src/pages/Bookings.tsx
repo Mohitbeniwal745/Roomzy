@@ -5,7 +5,7 @@ import Layout from "@/components/Layout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { CalendarDays, MapPin } from "lucide-react";
+import { CalendarDays, MapPin, DoorOpen } from "lucide-react";
 import { format } from "date-fns";
 
 const statusColor: Record<string, string> = {
@@ -25,7 +25,7 @@ const Bookings = () => {
     const fetch = async () => {
       const { data } = await supabase
         .from("bookings")
-        .select("*, listings(title, location, price_per_night)")
+        .select("*, listings(title, location, price_per_night), rooms(room_number)")
         .eq("guest_id", user.id)
         .order("created_at", { ascending: false });
       setBookings(data ?? []);
@@ -54,6 +54,11 @@ const Bookings = () => {
                       <CalendarDays className="h-3.5 w-3.5" />
                       {format(new Date(b.check_in), "MMM d, yyyy")} – {format(new Date(b.check_out), "MMM d, yyyy")}
                     </p>
+                    {b.rooms?.room_number && (
+                      <p className="mt-1 flex items-center gap-1 text-sm text-muted-foreground">
+                        <DoorOpen className="h-3.5 w-3.5" /> Room {b.rooms.room_number}
+                      </p>
+                    )}
                   </div>
                   <div className="flex flex-col items-end gap-1">
                     <div className="flex items-center gap-3">

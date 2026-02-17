@@ -42,7 +42,7 @@ const HostDashboard = () => {
     if (listingIds.length > 0) {
       const { data: bookingsData } = await supabase
         .from("bookings")
-        .select("*, listings!inner(title, host_id)")
+        .select("*, listings!inner(title, host_id), rooms(room_number)")
         .in("listing_id", listingIds)
         .order("created_at", { ascending: false });
 
@@ -160,6 +160,7 @@ const HostDashboard = () => {
                       <p className="font-semibold">{b.listings?.title}</p>
                       <p className="text-sm text-muted-foreground">
                         Guest: {b.guest_name} · <CalendarDays className="inline h-3.5 w-3.5" /> {format(new Date(b.check_in), "MMM d")} – {format(new Date(b.check_out), "MMM d, yyyy")}
+                        {b.rooms?.room_number && <> · Room {b.rooms.room_number}</>}
                       </p>
                       {b.status === "cancelled" && b.cancellation_reason && (
                         <p className="text-xs text-destructive mt-1">Reason: {b.cancellation_reason}</p>

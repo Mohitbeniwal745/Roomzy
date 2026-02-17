@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Upload, X } from "lucide-react";
+import { Upload, X, Plus, Trash2 } from "lucide-react";
 
 const AMENITIES = ["WiFi", "Kitchen", "Parking", "Pool", "Air Conditioning", "Heating", "Washer", "Dryer", "TV", "Gym", "Hot Tub", "Pets Allowed"];
 
@@ -24,6 +24,7 @@ const CreateListing = () => {
   const [price, setPrice] = useState("");
   const [amenities, setAmenities] = useState<string[]>([]);
   const [images, setImages] = useState<File[]>([]);
+  const [roomNumbers, setRoomNumbers] = useState<string[]>([""]);
   const [saving, setSaving] = useState(false);
 
   const toggleAmenity = (a: string) => {
@@ -48,6 +49,17 @@ const CreateListing = () => {
       toast({ title: "Error", description: error?.message ?? "Failed to create listing", variant: "destructive" });
       setSaving(false);
       return;
+    }
+
+    // Insert rooms
+    const validRooms = roomNumbers.filter((r) => r.trim() !== "");
+    if (validRooms.length > 0) {
+      const { error: roomErr } = await supabase.from("rooms").insert(
+        validRooms.map((rn) => ({ listing_id: listing.id, room_number: rn.trim() }))
+      );
+      if (roomErr) {
+        toast({ title: "Error adding rooms", description: roomErr.message, variant: "destructive" });
+      }
     }
 
     // Upload images
@@ -104,6 +116,33 @@ const CreateListing = () => {
                       {a}
                     </label>
                   ))}
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Room Numbers</Label>
+                <p className="text-xs text-muted-foreground">Add each room number your property has (e.g. 101, 102, 201)</p>
+                <div className="space-y-2">
+                  {roomNumbers.map((rn, i) => (
+                    <div key={i} className="flex items-center gap-2">
+                      <Input
+                        value={rn}
+                        onChange={(e) => {
+                          const updated = [...roomNumbers];
+                          updated[i] = e.target.value;
+                          setRoomNumbers(updated);
+                        }}
+                        placeholder={`Room ${i + 1}`}
+                      />
+                      {roomNumbers.length > 1 && (
+                        <Button type="button" variant="ghost" size="icon" onClick={() => setRoomNumbers((prev) => prev.filter((_, j) => j !== i))}>
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      )}
+                    </div>
+                  ))}
+                  <Button type="button" variant="outline" size="sm" onClick={() => setRoomNumbers((prev) => [...prev, ""])}>
+                    <Plus className="h-4 w-4 mr-1" /> Add Room
+                  </Button>
                 </div>
               </div>
               <div className="space-y-2">
