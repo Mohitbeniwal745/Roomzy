@@ -180,46 +180,9 @@ const ListingDetails = () => {
         <h1 className="font-display text-3xl font-bold md:text-4xl">{listing.title}</h1>
         <p className="mt-1 flex items-center gap-1 text-muted-foreground"><MapPin className="h-4 w-4" /> {listing.location}</p>
 
-        {/* Image gallery */}
-        <div className="mt-6">
+        {/* Image + Booking side by side */}
+        <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_380px]">
           <ImageGallery images={images} alt={listing.title} />
-        </div>
-
-        <div className="mt-8 grid gap-8 lg:grid-cols-[1fr_380px]">
-          {/* Details */}
-          <div className="space-y-6">
-            {host && (
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-primary-foreground font-semibold">
-                  {host.full_name?.[0]?.toUpperCase() ?? <User className="h-5 w-5" />}
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Hosted by</p>
-                  <p className="font-medium">{host.full_name || "Host"}</p>
-                </div>
-              </div>
-            )}
-            <div>
-              <h2 className="font-display text-xl font-semibold mb-2">About this place</h2>
-              <p className="text-muted-foreground whitespace-pre-line">{listing.description || "No description provided."}</p>
-            </div>
-            {listing.amenities && listing.amenities.length > 0 && (
-              <div>
-                <h2 className="font-display text-xl font-semibold mb-3">Amenities</h2>
-                <div className="flex flex-wrap gap-2">
-                  {listing.amenities.map((a: string) => (
-                    <Badge key={a} variant="secondary">{a}</Badge>
-                  ))}
-                </div>
-              </div>
-            )}
-            {hasRooms && (
-              <div>
-                <h2 className="font-display text-xl font-semibold mb-3">Rooms Available</h2>
-                <p className="text-sm text-muted-foreground">{rooms.length} room{rooms.length > 1 ? "s" : ""} in this property</p>
-              </div>
-            )}
-          </div>
 
           {/* Booking widget */}
           <Card className="sticky top-20 h-fit">
@@ -282,6 +245,41 @@ const ListingDetails = () => {
               </Button>
             </CardContent>
           </Card>
+        </div>
+
+        {/* Details below */}
+        <div className="mt-8 space-y-6">
+          {host && (
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-primary-foreground font-semibold">
+                {host.full_name?.[0]?.toUpperCase() ?? <User className="h-5 w-5" />}
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Hosted by</p>
+                <p className="font-medium">{host.full_name || "Host"}</p>
+              </div>
+            </div>
+          )}
+          <div>
+            <h2 className="font-display text-xl font-semibold mb-2">About this place</h2>
+            <p className="text-muted-foreground whitespace-pre-line">{listing.description || "No description provided."}</p>
+          </div>
+          {listing.amenities && listing.amenities.length > 0 && (
+            <div>
+              <h2 className="font-display text-xl font-semibold mb-3">Amenities</h2>
+              <div className="flex flex-wrap gap-2">
+                {listing.amenities.map((a: string) => (
+                  <Badge key={a} variant="secondary">{a}</Badge>
+                ))}
+              </div>
+            </div>
+          )}
+          {hasRooms && (
+            <div>
+              <h2 className="font-display text-xl font-semibold mb-3">Rooms Available</h2>
+              <p className="text-sm text-muted-foreground">{rooms.length} room{rooms.length > 1 ? "s" : ""} in this property</p>
+            </div>
+          )}
         </div>
       </div>
     </Layout>
