@@ -60,7 +60,13 @@ const ListingDetails = () => {
         setHost(hostData);
       }
       setImages(imagesRes.data?.map((i) => i.image_url) ?? []);
-      setRooms(roomsRes.data ?? []);
+      const sortedRooms = (roomsRes.data ?? []).sort((a, b) => {
+        const numA = parseInt(a.room_number, 10);
+        const numB = parseInt(b.room_number, 10);
+        if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
+        return a.room_number.localeCompare(b.room_number);
+      });
+      setRooms(sortedRooms);
       setBookings(bookingsRes.data ?? []);
       setLoading(false);
     };
