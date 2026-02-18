@@ -43,7 +43,10 @@ const ListingDetails = () => {
   const [activeImage, setActiveImage] = useState(0); // kept for compat
 
   useEffect(() => {
-    if (!id) return;
+    window.scrollTo(0, 0);
+  }, [id]);
+
+  useEffect(() => {
     const fetchData = async () => {
       const [listingRes, imagesRes, roomsRes, bookingsRes] = await Promise.all([
         supabase.from("listings").select("*").eq("id", id).single(),
