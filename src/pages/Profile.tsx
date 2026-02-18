@@ -11,10 +11,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
-  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
-import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 import { Trash2, Mail, Loader2 } from "lucide-react";
@@ -31,6 +27,7 @@ const Profile = () => {
   const [uploading, setUploading] = useState(false);
 
   // Deletion flow state
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const [otpDialogOpen, setOtpDialogOpen] = useState(false);
   const [otpValue, setOtpValue] = useState("");
   const [sendingOtp, setSendingOtp] = useState(false);
@@ -86,6 +83,7 @@ const Profile = () => {
       return;
     }
     toast({ title: "Verification code sent", description: `Check your email at ${user.email}` });
+    setConfirmDialogOpen(false);
     setOtpDialogOpen(true);
   };
 
@@ -151,40 +149,37 @@ const Profile = () => {
               {saving ? "Saving..." : "Save Changes"}
             </Button>
 
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button variant="destructive" className="w-full">
-                  <Trash2 className="mr-2 h-4 w-4" /> Delete Account
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                  <AlertDialogDescription>
+            <Button variant="destructive" className="w-full" onClick={() => setConfirmDialogOpen(true)}>
+              <Trash2 className="mr-2 h-4 w-4" /> Delete Account
+            </Button>
+
+            {/* Confirm Deletion Dialog */}
+            <Dialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Are you absolutely sure?</DialogTitle>
+                  <DialogDescription>
                     This action cannot be undone. We will send a verification code to your email
                     <span className="font-medium text-foreground"> {user?.email}</span> to confirm
                     deletion. All your data including listings, bookings, and messages will be permanently removed.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction
-                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  </DialogDescription>
+                </DialogHeader>
+                <DialogFooter className="gap-2 sm:gap-0">
+                  <Button variant="outline" onClick={() => setConfirmDialogOpen(false)}>Cancel</Button>
+                  <Button
+                    variant="destructive"
                     disabled={sendingOtp}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      handleSendOtp();
-                    }}
+                    onClick={handleSendOtp}
                   >
                     {sendingOtp ? (
                       <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Sending code...</>
                     ) : (
                       <><Mail className="mr-2 h-4 w-4" /> Send Verification Code</>
                     )}
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
 
             {/* OTP Verification Dialog */}
             <Dialog open={otpDialogOpen} onOpenChange={(open) => { if (!deleting) setOtpDialogOpen(open); setOtpValue(""); }}>
