@@ -7,6 +7,10 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import Layout from "@/components/Layout";
+import {
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
+} from "@/components/ui/dialog";
+import { MailCheck } from "lucide-react";
 import type { Database } from "@/integrations/supabase/types";
 
 type AppRole = Database["public"]["Enums"]["app_role"];
@@ -17,6 +21,7 @@ const Register = () => {
   const [fullName, setFullName] = useState("");
   const [role, setRole] = useState<AppRole>("guest");
   const [loading, setLoading] = useState(false);
+  const [showVerifyDialog, setShowVerifyDialog] = useState(false);
   const { signUp } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -30,8 +35,7 @@ const Register = () => {
     setLoading(true);
     try {
       await signUp(email, password, fullName, role);
-      toast({ title: "Account created!", description: "Please check your email to verify your account." });
-      navigate("/login");
+      setShowVerifyDialog(true);
     } catch (err: any) {
       toast({ title: "Error", description: err.message, variant: "destructive" });
     } finally {
@@ -93,6 +97,27 @@ const Register = () => {
             </p>
           </CardContent>
         </Card>
+
+        {/* Email Verification Dialog */}
+        <Dialog open={showVerifyDialog} onOpenChange={() => {}}>
+          <DialogContent className="sm:max-w-md" onPointerDownOutside={(e) => e.preventDefault()}>
+            <DialogHeader className="items-center text-center">
+              <div className="mx-auto mb-2 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
+                <MailCheck className="h-7 w-7 text-primary" />
+              </div>
+              <DialogTitle className="text-xl">Verify Your Email</DialogTitle>
+              <DialogDescription className="text-center">
+                We've sent a verification link to <span className="font-medium text-foreground">{email}</span>.
+                Please check your inbox and click the link to activate your account before logging in.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter className="sm:justify-center">
+              <Button onClick={() => { setShowVerifyDialog(false); navigate("/login"); }}>
+                Go to Login
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </Layout>
   );
