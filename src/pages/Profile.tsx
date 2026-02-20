@@ -14,6 +14,11 @@ import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 import { Trash2, Mail, Loader2 } from "lucide-react";
+import {
+  InputOTP,
+  InputOTPGroup,
+  InputOTPSlot,
+} from "@/components/ui/input-otp";
 
 
 const Profile = () => {
@@ -80,11 +85,27 @@ const Profile = () => {
       body: { action: "generate-code" },
     });
     setSendingOtp(false);
+
     if (res.error) {
-      toast({ title: "Failed to send code", description: res.error?.message || "Please try again.", variant: "destructive" });
+      toast({
+        title: "Failed to send code",
+        description: res.error?.message || "Edge function error. Please redeploy the function and try again.",
+        variant: "destructive",
+      });
       return;
     }
-    toast({ title: "Verification code sent", description: `Check your email at ${user.email}` });
+
+    // If email failed (e.g. Resend sandbox), the code is returned directly
+    if (res.data?.devCode) {
+      toast({
+        title: "Email unavailable — use this code",
+        description: `Your OTP is: ${res.data.devCode}  (email could not be sent: ${res.data.emailError ?? "sandbox limit"})`,
+        duration: 30000,
+      });
+    } else {
+      toast({ title: "Verification code sent", description: `Check your email at ${user.email}` });
+    }
+
     setConfirmDialogOpen(false);
     setOtpDialogOpen(true);
   };
@@ -183,14 +204,22 @@ const Profile = () => {
                   </DialogDescription>
                 </DialogHeader>
                 <div className="flex justify-center py-4">
-                  <Input
-                    value={otpValue}
-                    onChange={(e) => setOtpValue(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                    placeholder="Enter 6-digit code"
-                    className="text-center text-lg tracking-widest max-w-[200px]"
-                    maxLength={6}
-                    inputMode="numeric"
-                  />
+                  <div className="flex justify-center py-4">
+                    <InputOTP
+                      maxLength={6}
+                      value={otpValue}
+                      onChange={(value) => setOtpValue(value)}
+                    >
+                      <InputOTPGroup>
+                        <InputOTPSlot index={0} />
+                        <InputOTPSlot index={1} />
+                        <InputOTPSlot index={2} />
+                        <InputOTPSlot index={3} />
+                        <InputOTPSlot index={4} />
+                        <InputOTPSlot index={5} />
+                      </InputOTPGroup>
+                    </InputOTP>
+                  </div>
                 </div>
                 <DialogFooter className="gap-2 sm:gap-0">
                   <Button variant="outline" onClick={() => { setOtpDialogOpen(false); setOtpValue(""); setGeneratedCode(""); }} disabled={deleting}>

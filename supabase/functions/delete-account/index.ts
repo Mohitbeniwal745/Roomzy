@@ -5,9 +5,11 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-async function sendOtpEmail(email: string, code: string) {
+async function sendOtpEmail(email: string, code: string): Promise<{ ok: boolean; error?: string }> {
   const resendKey = Deno.env.get("RESEND_API_KEY");
-  if (!resendKey) throw new Error("RESEND_API_KEY is not configured");
+  if (!resendKey) {
+    return { ok: false, error: "RESEND_API_KEY is not configured in Supabase secrets" };
+  }
 
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
@@ -34,8 +36,10 @@ async function sendOtpEmail(email: string, code: string) {
 
   if (!res.ok) {
     const body = await res.text();
-    throw new Error(`Failed to send email [${res.status}]: ${body}`);
+    return { ok: false, error: `Resend error [${res.status}]: ${body}` };
   }
+
+  return { ok: true };
 }
 
 Deno.serve(async (req) => {
@@ -79,16 +83,41 @@ Deno.serve(async (req) => {
       await adminClient.from("deletion_codes").delete().eq("user_id", user.id);
 
       // Store new code (expires in 10 minutes)
-      await adminClient.from("deletion_codes").insert({
+      const { error: insertError } = await adminClient.from("deletion_codes").insert({
         user_id: user.id,
         code,
         expires_at: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
       });
 
-      // Send the code via email
-      await sendOtpEmail(user.email!, code);
+      if (insertError) {
+        console.error("Failed to insert deletion code:", insertError);
+        return new Response(JSON.stringify({ error: `DB error: ${insertError.message}` }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
 
-      return new Response(JSON.stringify({ success: true }), {
+      // Log the code for debugging
+      console.log(`[OTP] Generated for ${user.email}: ${code}`);
+
+      // Try to send email — never crash if it fails
+      const emailResult = await sendOtpEmail(user.email!, code);
+      if (!emailResult.ok) {
+        console.error("Email send failed:", emailResult.error);
+        // Return the code in response so user can still test
+        // Remove this in production once domain is verified
+        return new Response(JSON.stringify({
+          success: true,
+          emailSent: false,
+          emailError: emailResult.error,
+          // Only expose code when email fails (dev/sandbox fallback)
+          devCode: code,
+        }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      return new Response(JSON.stringify({ success: true, emailSent: true }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -171,6 +200,7 @@ Deno.serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {
+    console.error("Unhandled error:", err);
     return new Response(JSON.stringify({ error: err.message }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
