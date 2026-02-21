@@ -6,25 +6,28 @@ const corsHeaders = {
 };
 
 async function sendOtpEmail(email: string, code: string): Promise<{ ok: boolean; error?: string }> {
-  const resendKey = Deno.env.get("RESEND_API_KEY");
-  if (!resendKey) {
-    return { ok: false, error: "RESEND_API_KEY is not configured in Supabase secrets" };
+  const brevoKey = Deno.env.get("BREVO_API_KEY");
+  const senderEmail = Deno.env.get("BREVO_SENDER_EMAIL") || "noreply@roomzy.app";
+
+  if (!brevoKey) {
+    return { ok: false, error: "BREVO_API_KEY is not configured in Supabase secrets" };
   }
 
-  const res = await fetch("https://api.resend.com/emails", {
+  const res = await fetch("https://api.brevo.com/v3/smtp/email", {
     method: "POST",
     headers: {
-      "Authorization": `Bearer ${resendKey}`,
+      "api-key": brevoKey,
       "Content-Type": "application/json",
+      "Accept": "application/json",
     },
     body: JSON.stringify({
-      from: "Roomzy <onboarding@resend.dev>",
-      to: [email],
+      sender: { name: "Roomzy", email: senderEmail },
+      to: [{ email }],
       subject: "Your Account Deletion Code",
-      html: `
+      htmlContent: `
         <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 40px 32px;">
           <h2 style="color: #1a1a1a; margin: 0 0 16px 0; font-size: 22px; font-weight: 700;">Account Deletion Verification</h2>
-          <p style="color: #333; font-size: 15px; line-height: 1.6; margin: 0 0 24px 0;">You requested to delete your account. Use the code below to confirm:</p>
+          <p style="color: #333; font-size: 15px; line-height: 1.6; margin: 0 0 24px 0;">You requested to delete your Roomzy account. Use the code below to confirm:</p>
           <div style="background: #f5f5f5; border: 1px solid #e0e0e0; border-radius: 8px; padding: 32px; text-align: center; margin: 0 0 24px 0;">
             <span style="font-size: 36px; font-weight: 700; letter-spacing: 0.5em; color: #1a1a1a; font-family: monospace;">${code.split('').join(' ')}</span>
           </div>
@@ -36,7 +39,7 @@ async function sendOtpEmail(email: string, code: string): Promise<{ ok: boolean;
 
   if (!res.ok) {
     const body = await res.text();
-    return { ok: false, error: `Resend error [${res.status}]: ${body}` };
+    return { ok: false, error: `Brevo error [${res.status}]: ${body}` };
   }
 
   return { ok: true };
@@ -75,14 +78,12 @@ Deno.serve(async (req) => {
     const action = body.action || "delete";
     const adminClient = createClient(supabaseUrl, serviceRoleKey);
 
-    // ACTION: generate-code — generate a 6-digit code and email it
+    // ACTION: generate-code
     if (action === "generate-code") {
       const code = String(Math.floor(100000 + Math.random() * 900000));
 
-      // Clear old codes for this user
       await adminClient.from("deletion_codes").delete().eq("user_id", user.id);
 
-      // Store new code (expires in 10 minutes)
       const { error: insertError } = await adminClient.from("deletion_codes").insert({
         user_id: user.id,
         code,
@@ -90,27 +91,23 @@ Deno.serve(async (req) => {
       });
 
       if (insertError) {
-        console.error("Failed to insert deletion code:", insertError);
+        console.error("DB insert error:", insertError);
         return new Response(JSON.stringify({ error: `DB error: ${insertError.message}` }), {
           status: 500,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
 
-      // Log the code for debugging
       console.log(`[OTP] Generated for ${user.email}: ${code}`);
 
-      // Try to send email — never crash if it fails
       const emailResult = await sendOtpEmail(user.email!, code);
       if (!emailResult.ok) {
         console.error("Email send failed:", emailResult.error);
-        // Return the code in response so user can still test
-        // Remove this in production once domain is verified
+        // Return devCode as fallback so user can still enter the code manually
         return new Response(JSON.stringify({
           success: true,
           emailSent: false,
           emailError: emailResult.error,
-          // Only expose code when email fails (dev/sandbox fallback)
           devCode: code,
         }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -122,7 +119,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    // ACTION: delete — verify code and delete the account
+    // ACTION: delete — verify code then delete account
     const { code } = body;
     if (!code || code.length !== 6) {
       return new Response(JSON.stringify({ error: "A valid 6-digit code is required" }), {
@@ -131,7 +128,6 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Verify code
     const { data: codeRow } = await adminClient
       .from("deletion_codes")
       .select("*")
@@ -148,10 +144,8 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Mark code as used
     await adminClient.from("deletion_codes").update({ used: true }).eq("id", codeRow.id);
 
-    // Proceed with account deletion
     const { data: listings } = await adminClient
       .from("listings")
       .select("id")
@@ -199,6 +193,7 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({ success: true }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
+
   } catch (err) {
     console.error("Unhandled error:", err);
     return new Response(JSON.stringify({ error: err.message }), {
