@@ -83,9 +83,18 @@ const Profile = () => {
         body: { action: "delete" },
       });
 
+      console.log("Delete account response:", { data, error });
+
       if (error || data?.error) {
-        const msg = data?.error ?? error?.message ?? "Failed to delete account. Please try again.";
-        toast({ title: "Deletion failed", description: msg, variant: "destructive" });
+        // If it's a Supabase error object, it often has a .message or .error field
+        const errorDetail = data?.error || error?.message || "Function error";
+        console.error("Deletion operation failed:", errorDetail);
+
+        toast({
+          title: "Deletion failed",
+          description: `Error: ${errorDetail}`,
+          variant: "destructive"
+        });
         setDeleting(false);
         setConfirmDialogOpen(false);
         return;
