@@ -13,12 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
-import { Trash2, Mail, Loader2 } from "lucide-react";
-import {
-  InputOTP,
-  InputOTPGroup,
-  InputOTPSlot,
-} from "@/components/ui/input-otp";
+import { Trash2, Loader2 } from "lucide-react";
 
 
 const Profile = () => {
@@ -33,10 +28,6 @@ const Profile = () => {
 
   // Deletion flow state
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
-  const [otpDialogOpen, setOtpDialogOpen] = useState(false);
-  const [otpValue, setOtpValue] = useState("");
-  const [generatedCode, setGeneratedCode] = useState("");
-  const [sendingOtp, setSendingOtp] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
@@ -76,50 +67,16 @@ const Profile = () => {
     setSaving(false);
   };
 
-  const handleSendOtp = async () => {
-    if (!user?.email) return;
-    setSendingOtp(true);
-    const { data: { session } } = await supabase.auth.getSession();
-    const res = await supabase.functions.invoke("delete-account", {
-      headers: { Authorization: `Bearer ${session?.access_token}` },
-      body: { action: "generate-code" },
-    });
-    setSendingOtp(false);
-
-    if (res.error) {
-      toast({
-        title: "Failed to send code",
-        description: res.error?.message || "Edge function error. Please redeploy the function and try again.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // If email failed (e.g. Resend sandbox), the code is returned directly
-    if (res.data?.devCode) {
-      toast({
-        title: "Email unavailable — use this code",
-        description: `Your OTP is: ${res.data.devCode}  (email could not be sent: ${res.data.emailError ?? "sandbox limit"})`,
-        duration: 30000,
-      });
-    } else {
-      toast({ title: "Verification code sent", description: `Check your email at ${user.email}` });
-    }
-
-    setConfirmDialogOpen(false);
-    setOtpDialogOpen(true);
-  };
-
-  const handleConfirmDelete = async () => {
-    if (!user?.email || otpValue.length < 6) return;
+  const handleDeleteAccount = async () => {
+    if (!user) return;
     setDeleting(true);
     const { data: { session } } = await supabase.auth.getSession();
     const res = await supabase.functions.invoke("delete-account", {
       headers: { Authorization: `Bearer ${session?.access_token}` },
-      body: { action: "delete", code: otpValue },
+      body: { action: "delete" },
     });
     setDeleting(false);
-    setOtpDialogOpen(false);
+    setConfirmDialogOpen(false);
     if (res.error) {
       toast({ title: "Error", description: "Failed to delete account. Please try again.", variant: "destructive" });
     } else {
@@ -166,74 +123,23 @@ const Profile = () => {
             </Button>
 
             {/* Confirm Deletion Dialog */}
-            <Dialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
+            <Dialog open={confirmDialogOpen} onOpenChange={(open) => { if (!deleting) setConfirmDialogOpen(open); }}>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>Are you absolutely sure?</DialogTitle>
+                  <DialogTitle>Delete Account</DialogTitle>
                   <DialogDescription>
-                    This action cannot be undone. We will send a verification code to your email
-                    <span className="font-medium text-foreground"> {user?.email}</span> to confirm
-                    deletion. All your data including listings, bookings, and messages will be permanently removed.
+                    Are you sure you want to delete your account? This action cannot be undone and all your data will be permanently removed.
                   </DialogDescription>
                 </DialogHeader>
                 <DialogFooter className="gap-2 sm:gap-0">
-                  <Button variant="outline" onClick={() => setConfirmDialogOpen(false)}>Cancel</Button>
-                  <Button
-                    variant="destructive"
-                    disabled={sendingOtp}
-                    onClick={handleSendOtp}
-                  >
-                    {sendingOtp ? (
-                      <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Sending code...</>
-                    ) : (
-                      <><Mail className="mr-2 h-4 w-4" /> Send Verification Code</>
-                    )}
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-
-            {/* OTP Verification Dialog */}
-            <Dialog open={otpDialogOpen} onOpenChange={(open) => { if (!deleting) { setOtpDialogOpen(open); setOtpValue(""); setGeneratedCode(""); } }}>
-              <DialogContent className="sm:max-w-md">
-                <DialogHeader>
-                  <DialogTitle>Enter Verification Code</DialogTitle>
-                  <DialogDescription>
-                    We sent a 6-digit code to <span className="font-medium text-foreground">{user?.email}</span>.
-                    Enter it below to permanently delete your account.
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="flex justify-center py-4">
-                  <div className="flex justify-center py-4">
-                    <InputOTP
-                      maxLength={6}
-                      value={otpValue}
-                      onChange={(value) => setOtpValue(value)}
-                    >
-                      <InputOTPGroup>
-                        <InputOTPSlot index={0} />
-                        <InputOTPSlot index={1} />
-                        <InputOTPSlot index={2} />
-                        <InputOTPSlot index={3} />
-                        <InputOTPSlot index={4} />
-                        <InputOTPSlot index={5} />
-                      </InputOTPGroup>
-                    </InputOTP>
-                  </div>
-                </div>
-                <DialogFooter className="gap-2 sm:gap-0">
-                  <Button variant="outline" onClick={() => { setOtpDialogOpen(false); setOtpValue(""); setGeneratedCode(""); }} disabled={deleting}>
+                  <Button variant="outline" onClick={() => setConfirmDialogOpen(false)} disabled={deleting}>
                     Cancel
                   </Button>
-                  <Button
-                    variant="destructive"
-                    disabled={otpValue.length < 6 || deleting}
-                    onClick={handleConfirmDelete}
-                  >
+                  <Button variant="destructive" onClick={handleDeleteAccount} disabled={deleting}>
                     {deleting ? (
                       <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Deleting...</>
                     ) : (
-                      "Confirm & Delete"
+                      "Yes, Delete My Account"
                     )}
                   </Button>
                 </DialogFooter>
