@@ -78,16 +78,22 @@ const Profile = () => {
         return;
       }
 
-      const { data, error } = await supabase.functions.invoke("delete-account", {
-        headers: { Authorization: `Bearer ${session.access_token}` },
-        body: { action: "delete" },
+      const functionUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/delete-account`;
+      const response = await fetch(functionUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+          'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+        },
+        body: JSON.stringify({ action: "delete" }),
       });
 
-      console.log("Delete account response:", { data, error });
+      const result = await response.json().catch(() => ({ error: "Could not parse response" }));
+      console.log("Delete account response:", { status: response.status, result });
 
-      if (error || data?.error) {
-        // If it's a Supabase error object, it often has a .message or .error field
-        const errorDetail = data?.error || error?.message || "Function error";
+      if (!response.ok || result.error) {
+        const errorDetail = result.error || `Status ${response.status}`;
         console.error("Deletion operation failed:", errorDetail);
 
         toast({
