@@ -70,19 +70,37 @@ const Profile = () => {
   const handleDeleteAccount = async () => {
     if (!user) return;
     setDeleting(true);
-    const { data: { session } } = await supabase.auth.getSession();
-    const res = await supabase.functions.invoke("delete-account", {
-      headers: { Authorization: `Bearer ${session?.access_token}` },
-      body: { action: "delete" },
-    });
-    setDeleting(false);
-    setConfirmDialogOpen(false);
-    if (res.error) {
-      toast({ title: "Error", description: "Failed to delete account. Please try again.", variant: "destructive" });
-    } else {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        toast({ title: "Error", description: "Session expired. Please sign in again.", variant: "destructive" });
+        setDeleting(false);
+        return;
+      }
+
+      const { data, error } = await supabase.functions.invoke("delete-account", {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+        body: { action: "delete" },
+      });
+
+      if (error || data?.error) {
+        const msg = data?.error ?? error?.message ?? "Failed to delete account. Please try again.";
+        toast({ title: "Deletion failed", description: msg, variant: "destructive" });
+        setDeleting(false);
+        setConfirmDialogOpen(false);
+        return;
+      }
+
+      // Success — sign out locally and redirect
       await signOut();
+      setConfirmDialogOpen(false);
       navigate("/");
-      toast({ title: "Account deleted", description: "Your account has been permanently removed." });
+      toast({ title: "Account deleted", description: "Your account and all data have been permanently removed." });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "An unexpected error occurred.";
+      toast({ title: "Error", description: message, variant: "destructive" });
+      setDeleting(false);
+      setConfirmDialogOpen(false);
     }
   };
 
