@@ -48,6 +48,9 @@ const Register = () => {
       <div className="flex min-h-[70vh] items-center justify-center px-4 py-12">
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
+            <div className="mx-auto mb-2 flex h-20 w-20 items-center justify-center overflow-hidden">
+              <img src="/roomzy-favicon.png" alt="Roomzy Logo" className="h-full w-full object-contain" />
+            </div>
             <CardTitle className="font-display text-2xl">Create Account</CardTitle>
             <CardDescription>Join Roomzy as a guest or host</CardDescription>
           </CardHeader>
@@ -71,18 +74,16 @@ const Register = () => {
                   <button
                     type="button"
                     onClick={() => setRole("guest")}
-                    className={`rounded-lg border-2 p-3 text-center text-sm font-medium transition-colors ${
-                      role === "guest" ? "border-primary bg-primary/10 text-primary" : "border-border hover:border-primary/40"
-                    }`}
+                    className={`rounded-lg border-2 p-3 text-center text-sm font-medium transition-colors ${role === "guest" ? "border-primary bg-primary/10 text-primary" : "border-border hover:border-primary/40"
+                      }`}
                   >
                     🏖️ Book stays
                   </button>
                   <button
                     type="button"
                     onClick={() => setRole("host")}
-                    className={`rounded-lg border-2 p-3 text-center text-sm font-medium transition-colors ${
-                      role === "host" ? "border-primary bg-primary/10 text-primary" : "border-border hover:border-primary/40"
-                    }`}
+                    className={`rounded-lg border-2 p-3 text-center text-sm font-medium transition-colors ${role === "host" ? "border-primary bg-primary/10 text-primary" : "border-border hover:border-primary/40"
+                      }`}
                   >
                     🏠 Host guests
                   </button>
@@ -99,7 +100,7 @@ const Register = () => {
         </Card>
 
         {/* Email Verification Dialog */}
-        <Dialog open={showVerifyDialog} onOpenChange={() => {}}>
+        <Dialog open={showVerifyDialog} onOpenChange={() => { }}>
           <DialogContent className="sm:max-w-md" onPointerDownOutside={(e) => e.preventDefault()}>
             <DialogHeader className="items-center text-center">
               <div className="mx-auto mb-2 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">

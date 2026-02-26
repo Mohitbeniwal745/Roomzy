@@ -7,89 +7,67 @@ const corsHeaders = {
 }
 
 serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders })
-  }
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
+
+  console.log("Delete-account started (Dual Verification Mode)")
 
   try {
     const authHeader = req.headers.get('Authorization')
-    if (!authHeader) {
-      return new Response(JSON.stringify({ error: "Missing Authorization header" }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      })
-    }
+    if (!authHeader) throw new Error("Missing Authorization")
 
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')
-    // Try both the manual secret and the built-in one
-    const serviceRoleKey = Deno.env.get('SERVICE_ROLE_KEY') || Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!
+    const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!
+    const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 
-    if (!supabaseUrl || !serviceRoleKey) {
-      console.error("Missing ENV:", { url: !!supabaseUrl, key: !!serviceRoleKey })
-      return new Response(JSON.stringify({ error: "Server configuration error (missing keys)" }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      })
-    }
+    console.log(`Verifying user using Anon Key (${anonKey.substring(0, 10)}...)`)
 
-    const adminClient = createClient(supabaseUrl, serviceRoleKey, {
-      auth: { autoRefreshToken: false, persistSession: false }
-    })
-
-    // Get user from token to verify identity
+    // 1. Use ANON key to verify the user (this is what the token was issued for)
+    const verificationClient = createClient(supabaseUrl, anonKey)
     const token = authHeader.replace('Bearer ', '')
-    const { data: { user }, error: authError } = await adminClient.auth.getUser(token)
+    const { data: { user }, error: authError } = await verificationClient.auth.getUser(token)
 
     if (authError || !user) {
-      console.error("Token verification failed:", authError)
-      return new Response(JSON.stringify({ error: "Invalid session or user not found" }), {
+      console.error("User identity verification failed:", authError?.message)
+      return new Response(JSON.stringify({ error: `User identity check failed: ${authError?.message || "Invalid session"}` }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
     }
 
     const userId = user.id
-    console.log(`Deleting account for: ${userId}`)
+    console.log(`Verified user: ${userId}. Proceeding to delete using Service Key (${serviceKey.substring(0, 10)}...)`)
 
-    // 1. Manually clean up things that MIGHT NOT have cascade delete
-    // (Storage and any loose tables)
+    // 2. Use SERVICE key for the actual deletion
+    const adminClient = createClient(supabaseUrl, serviceKey, {
+      auth: { autoRefreshToken: false, persistSession: false }
+    })
 
-    console.log("Cleaning up manual tables...")
-    await adminClient.from('deletion_codes').delete().eq('user_id', userId)
-
-    console.log("Cleaning up storage...")
+    // Clean up storage (it doesn't cascade)
     try {
-      const { data: avatarFiles } = await adminClient.storage.from('avatars').list(userId)
-      if (avatarFiles && avatarFiles.length > 0) {
-        await adminClient.storage.from('avatars').remove(avatarFiles.map(f => `${userId}/${f.name}`))
+      const { data: files } = await adminClient.storage.from('avatars').list(userId)
+      if (files && files.length > 0) {
+        await adminClient.storage.from('avatars').remove(files.map(f => `${userId}/${f.name}`))
       }
     } catch (e) {
-      console.error("Non-fatal storage error:", e)
+      console.warn("Storage cleanup failed:", e.message)
     }
 
-    // 2. DELETE THE AUTH USER
-    // This triggers the database "ON DELETE CASCADE" for profiles, listings, bookings, etc.
-    console.log("Performing final auth deletion...")
+    // Attempt the deletion
     const { error: deleteError } = await adminClient.auth.admin.deleteUser(userId)
-
     if (deleteError) {
-      console.error("Auth deletion error:", deleteError)
-      return new Response(JSON.stringify({ error: `Auth Delete Error: ${deleteError.message}` }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      })
+      console.error("Service key failed to delete user:", deleteError.message)
+      throw new Error(`Permission Denied: ${deleteError.message}`)
     }
 
-    console.log("Deletion complete.")
-    return new Response(JSON.stringify({ success: true, message: "Account successfully deleted" }), {
-      status: 200,
+    console.log("Account wiped successfully")
+    return new Response(JSON.stringify({ success: true }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     })
 
   } catch (err: any) {
-    console.error("Global error in function:", err)
-    return new Response(JSON.stringify({ error: `System Error: ${err.message}` }), {
-      status: 500,
+    console.error("Function fatal error:", err.message)
+    return new Response(JSON.stringify({ error: err.message }), {
+      status: 400,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     })
   }

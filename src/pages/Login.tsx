@@ -35,6 +35,9 @@ const Login = () => {
       <div className="flex min-h-[70vh] items-center justify-center px-4 py-12">
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
+            <div className="mx-auto mb-2 flex h-20 w-20 items-center justify-center overflow-hidden">
+              <img src="/roomzy-favicon.png" alt="Roomzy Logo" className="h-full w-full object-contain" />
+            </div>
             <CardTitle className="font-display text-2xl">Welcome Back</CardTitle>
             <CardDescription>Sign in to your Roomzy account</CardDescription>
           </CardHeader>
