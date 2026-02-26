@@ -91,9 +91,10 @@ const Index = () => {
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: 60 }}
                   transition={{ duration: 0.5, ease: "easeInOut" }}
-                  className="block bg-gradient-to-r from-primary via-primary/80 to-accent bg-clip-text text-transparent tracking-tight"
+                  className="flex items-center justify-center gap-3 bg-gradient-to-r from-primary via-primary/80 to-accent bg-clip-text text-transparent tracking-tight"
                   style={{ fontSize: "1.15em", letterSpacing: "-0.02em" }}
                 >
+                  <img src="/roomzy-favicon.png" alt="Roomzy Logo" className="h-12 w-12 md:h-16 md:w-16 object-contain" />
                   Roomzy
                 </motion.span>
               ) : (

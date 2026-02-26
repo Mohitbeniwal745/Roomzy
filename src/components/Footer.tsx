@@ -7,7 +7,7 @@ const Footer = () => (
       <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
         <div>
           <Link to="/" className="flex items-center gap-2 mb-3">
-            <Home className="h-5 w-5 text-primary" />
+            <img src="/roomzy-favicon.png" alt="Roomzy" className="h-6 w-6 object-contain" />
             <span className="font-display text-lg font-bold">Roomzy</span>
           </Link>
           <p className="text-sm text-muted-foreground">Find your perfect stay, anywhere in the world.</p>
